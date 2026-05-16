@@ -1,4 +1,5 @@
 import os
+import io
 
 import pandas as pd
 import numpy as np
@@ -10,8 +11,35 @@ from sklearn.model_selection import train_test_split
 
 
 @st.cache_data
-def load_data(path: str) -> pd.DataFrame:
+def load_data_from_path(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    df = df.fillna(method="ffill")
+
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].astype(str).str.replace(",", "")
+            df[col] = pd.to_numeric(df[col], errors="ignore")
+
+    return df
+
+
+@st.cache_data
+def load_data_from_bytes(content: bytes) -> pd.DataFrame:
+    import traceback
+
+    try:
+        # Try reading raw bytes first
+        df = pd.read_csv(io.BytesIO(content))
+    except Exception:
+        try:
+            # Fallback to text decoding
+            df = pd.read_csv(io.StringIO(content.decode("utf-8")))
+        except Exception as e:
+            # Raise a detailed exception for debugging
+            tb = traceback.format_exc()
+            raise RuntimeError(f"Failed to parse uploaded CSV. Error: {e}\nTraceback:\n{tb}")
+
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     df = df.fillna(method="ffill")
 
@@ -85,7 +113,12 @@ def main():
     df = None
 
     if os.path.exists(dataset_path):
-        df = load_data(dataset_path)
+        try:
+            df = load_data_from_path(dataset_path)
+        except Exception as e:
+            st.error(f"Failed to load dataset from path: {e}")
+            st.text(str(e))
+            return
     else:
         uploaded_file = st.file_uploader(
             "Upload Gold-Silver-Data.csv",
@@ -93,7 +126,16 @@ def main():
             help="Upload your dataset if it is not already in the repo.",
         )
         if uploaded_file is not None:
-            df = load_data(uploaded_file)
+            try:
+                # read uploaded bytes and pass to cached bytes loader
+                content = uploaded_file.read()
+                if hasattr(content, "encode") and isinstance(content, str):
+                    content = content.encode("utf-8")
+                df = load_data_from_bytes(content)
+            except Exception as e:
+                st.error(f"Failed to parse uploaded CSV: {e}")
+                st.text(str(e))
+                return
         else:
             st.warning(
                 "No dataset found. Upload a Gold-Silver-Data.csv file to continue."
