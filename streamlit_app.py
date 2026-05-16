@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -80,11 +82,23 @@ def main():
     )
 
     dataset_path = "Gold-Silver-Data.csv"
-    try:
+    df = None
+
+    if os.path.exists(dataset_path):
         df = load_data(dataset_path)
-    except FileNotFoundError:
-        st.error(f"Dataset not found: {dataset_path}. Please upload it to the project root.")
-        return
+    else:
+        uploaded_file = st.file_uploader(
+            "Upload Gold-Silver-Data.csv",
+            type=["csv"],
+            help="Upload your dataset if it is not already in the repo.",
+        )
+        if uploaded_file is not None:
+            df = load_data(uploaded_file)
+        else:
+            st.warning(
+                "No dataset found. Upload a Gold-Silver-Data.csv file to continue."
+            )
+            return
 
     with st.expander("Dataset Preview"):
         st.dataframe(df.head())

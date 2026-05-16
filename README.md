@@ -9,7 +9,7 @@ This project trains price prediction models for gold and silver using historical
 - `.gitignore`: ignores Python artifacts and model files.
 
 ## Setup
-1. Place your dataset `Gold-Silver-Data.csv` in the project root.
+1. Place your dataset `Gold-Silver-Data.csv` in the project root or upload it in the Streamlit app.
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
